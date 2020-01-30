@@ -95,6 +95,9 @@ enum <uint> MediaType
     MD = 91,
     MDData = 92,
     MDData2 = 93,
+    MD60 = 94,
+    MD74 = 95,
+    MD80 = 96,
 
     UDO = 100,
     UDO2 = 101,

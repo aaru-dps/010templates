@@ -1,0 +1,275 @@
+//------------------------------------------------
+//--- 010 Editor v10.0 Binary Template
+//
+//      File: 
+//   Authors: 
+//   Version: 
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+
+BigEndian();
+
+typedef struct
+{
+    unsigned byte data[12];
+} SubchannelP <read=SubchannelPRead>;
+
+string SubchannelPRead(SubchannelP &p)
+{
+    unsigned byte pause = p.data[0];
+    int i;
+
+    for(i = 0; i < 12; i++)
+    {
+        if(p.data[i] != 0x00 && p.data[i] != 0xFF)
+            return "Invalid";
+
+        if(p.data[i] != pause)
+            return "Invalid";
+    }
+
+    if(pause == 0xFF)
+        return "Pause";
+    else
+        return "Play";
+}
+
+typedef struct
+{
+    byte ctrl : 4 <name="CTRL">;
+    byte adr : 4 <name="ADR">;
+    if(adr == 1)
+    {
+        byte TNO <name="TNO">;
+        byte INDEX <name="INDEX">;
+        byte MIN <name="MIN">;
+        byte SEC <name="SEC">;
+        byte FRAME <name="FRAME">;
+        byte ZERO <name="ZERO">;
+        byte AMIN <name="AMIN">;
+        byte ASEC <name="ASEC">;
+        byte AFRAME <name="AFRAME">;
+    }
+    else if(adr == 2)
+    {
+        byte n1:4;
+        byte n2:4;
+        byte n3:4;
+        byte n4:4;
+        byte n5:4;
+        byte n6:4;
+        byte n7:4;
+        byte n8:4;
+        byte n9:4;
+        byte n10:4;
+        byte n11:4;
+        byte n12:4;
+        byte n13:4;
+        byte zero:4;
+        byte zero2;
+        byte frame;
+    }
+    else if(adr == 3)
+    {
+        unsigned int i1:6;
+        unsigned int i2:6;
+        unsigned int i3:6;
+        unsigned int i4:6;
+        unsigned int i5:6;
+        unsigned int padding:2;
+        unsigned int i6:4;
+        unsigned int i7:4;
+        unsigned int i8:4;
+        unsigned int i9:4;
+        unsigned int i10:4;
+        unsigned int i11:4;
+        unsigned int i12:4;
+        unsigned int zero:4;
+        byte aframe;
+    }
+    else
+        unsigned byte data[9];
+    unsigned short crc <name="EDC">;
+} SubchannelQ <read=SubchannelQRead>;
+
+char isrctoa(byte isrc)
+{
+    switch(isrc)
+    {
+        case 0:
+            return '0';
+        case 1:
+            return '1';
+        case 2:
+            return '2';
+        case 3:
+            return '3';
+        case 4:
+            return '4';
+        case 5:
+            return '5';
+        case 6:
+            return '6';
+        case 7:
+            return '7';
+        case 8:
+            return '8';
+        case 9:
+            return '9';
+        case 0x11:
+            return 'A';
+        case 0x12:
+            return 'B';
+        case 0x13:
+            return 'C';
+        case 0x14:
+            return 'D';
+        case 0x15:
+            return 'E';
+        case 0x16:
+            return 'F';
+        case 0x17:
+            return 'G';
+        case 0x18:
+            return 'H';
+        case 0x19:
+            return 'I';
+        case 0x1A:
+            return 'J';
+        case 0x1B:
+            return 'K';
+        case 0x1C:
+            return 'L';
+        case 0x1D:
+            return 'M';
+        case 0x1E:
+            return 'N';
+        case 0x1F:
+            return 'O';
+        case 0x20:
+            return 'P';
+        case 0x21:
+            return 'Q';
+        case 0x22:
+            return 'R';
+        case 0x23:
+            return 'S';
+        case 0x24:
+            return 'T';
+        case 0x25:
+            return 'U';
+        case 0x26:
+            return 'V';
+        case 0x27:
+            return 'W';
+        case 0x28:
+            return 'X';
+        case 0x29:
+            return 'Y';
+        case 0x2A:
+            return 'Z';
+        default:
+            return '';
+    }
+}
+
+string SubchannelQRead(SubchannelQ &q)
+{
+    local char str[32];
+    local char str2[32];
+    local char str3[32];
+    local char trackType[];
+    local int relLba;
+    local int absoluteLba;
+    local int binaryMin;
+    local int binarySec;
+    local int binaryFrame;
+    local int binaryAMin;
+    local int binaryASec;
+    local int binaryAFrame;
+
+    switch(q.ctrl)
+    {
+        case 0:
+            trackType = "audio";
+            break;
+        case 4:
+            trackType = "data";
+            break;
+        case 5:
+            trackType = "video";
+            break;
+        default:
+            trackType = "video";
+            break;
+    }
+
+    switch(q.adr)
+    {
+        case 1:
+            binaryMin = ((q.MIN / 16) * 10) + (q.MIN % 16);
+            binarySec = ((q.SEC / 16) * 10) + (q.SEC % 16);
+            binaryFrame = ((q.FRAME / 16) * 10) + (q.FRAME % 16);
+            relLba = binaryMin * 4500 + binarySec * 75 + binaryFrame;
+
+            binaryAMin = ((q.AMIN / 16) * 10) + (q.AMIN % 16);
+            binaryASec = ((q.ASEC / 16) * 10) + (q.ASEC % 16);
+            binaryAFrame = ((q.AFRAME / 16) * 10) + (q.AFRAME % 16);
+            absoluteLba = binaryAMin * 4500 + binaryASec * 75 + binaryAFrame - 150;
+
+            if(q.INDEX == 0)
+            {
+                str2 = "pregap";
+                str3 = "remaining pregap";
+            }
+            else
+            {
+                SPrintf(str2, "index %02d", q.INDEX);
+                str3 = "relative position";
+            }
+
+            SPrintf(str, "Q-Mode 1 for %s track %d, %s position %02d:%02d:%02d (LBA %d) %s %02d:%02d:%02d (LBA %d) CRC 0x%04x", trackType, ((q.TNO / 16) * 10) + (q.TNO % 16), str2, binaryMin, binarySec, binaryFrame, relLba, str3, binaryAMin, binaryASec, binaryAFrame, absoluteLba, q.crc);
+            break;
+        case 2:
+            SPrintf(str, "Q-Mode 2 (MCN): %d%d%d%d%d%d%d%d%d%d%d%d%d frame %02x", q.n1, q.n2, q.n3, q.n4, q.n5, q.n6, q.n7, q.n8, q.n9, q.n10, q.n11, q.n12, q.n13, q.frame);
+            break;
+        case 3:
+            SPrintf(str, "Q-Mode 3 (ISRC): %c%c%c%c%c%c%c%c%c%c%c%c frame %02x", isrctoa(q.i1), isrctoa(q.i2), isrctoa(q.i3), isrctoa(q.i4), isrctoa(q.i5), isrctoa(q.i6), isrctoa(q.i7), isrctoa(q.i8), isrctoa(q.i9), isrctoa(q.i10), isrctoa(q.i11), isrctoa(q.i12), q.aframe);
+            break;
+        default:
+            SPrintf(str, "Q-Mode %d unknown for %s track", q.adr, trackType);
+            break;
+    }
+
+    return str;
+}
+
+typedef struct
+{
+    byte data[12];
+} SubchannelRW;
+
+typedef struct
+{
+    SubchannelP p <name="P">;
+    SubchannelQ q <name="Q">;
+    SubchannelRW r <name="R">;
+    SubchannelRW s <name="S">;
+    SubchannelRW t <name="T">;
+    SubchannelRW u <name="U">;
+    SubchannelRW v <name="V">;
+    SubchannelRW w <name="W">;
+} Subchannel <read=SubchannelRead>;
+
+string SubchannelRead(Subchannel &sub)
+{
+    return SubchannelQRead(sub.q);
+}
+
+local int64 sectors = FileSize()/96;
+
+Subchannel sub[sectors] <optimize=false>;

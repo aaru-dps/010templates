@@ -255,17 +255,24 @@ enum <uint> MediaType
 
     Bernoulli = 340,
     Bernoulli2 = 341,
-    Ditto = 342,
-    DittoMax = 343,
-    Jaz = 344,
-    Jaz2 = 345,
+    Ditto  = 342,
+    DittoMax  = 343,
+    Jaz        = 344,
+    Jaz2   = 345,
     PocketZip = 346,
-    REV120 = 347,
-    REV35 = 348,
-    REV70 = 349,
-    ZIP100 = 350,
+    REV120     = 347,
+    REV35  = 348,
+    REV70     = 349,
+    ZIP100     = 350,
     ZIP250 = 351,
-    ZIP750 = 352,
+    ZIP750    = 352,
+    Bernoulli35 = 353,
+    Bernoulli44 = 354,
+    Bernoulli65 = 355,
+    Bernoulli90 = 356,
+    Bernoulli105 = 357,
+    Bernoulli150 = 358,
+    Bernoulli230 = 359,
 
     CompactCassette = 360,
     Data8 = 361,
@@ -551,7 +558,33 @@ enum <uint> MediaType
 
     VideoNow = 740,
     VideoNowColor = 741,
-    VideoNowXp = 742
+    VideoNowXp = 742,
+
+    Bernoulli10 = 750,
+    Bernoulli20 = 751,
+    BernoulliBox2_20 = 752,
+
+    KodakVerbatim3 = 760,
+    KodakVerbatim6 = 761,
+    KodakVerbatim12 = 762,
+
+    ProfessionalDisc = 770,
+    ProfessionalDiscDual = 771,
+    ProfessionalDiscTriple = 772,
+    ProfessionalDiscQuad = 773,
+    PDD = 774,
+    PDD_WORM = 775,
+    ArchivalDisc = 776,
+    ArchivalDisc2 = 777,
+    ArchivalDisc3 = 779,
+    ODC300R = 778,
+    ODC300RE = 780,
+    ODC600R = 781,
+    ODC600RE = 782,
+    ODC1200RE = 783,
+    ODC1500R = 784,
+    ODC3300R = 785,
+    ODC5500R = 786
 };
 
 enum <ushort> CompressionType

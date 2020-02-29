@@ -1,18 +1,20 @@
 //------------------------------------------------
 //--- 010 Editor v8.0.1 Binary Template
 //
-//      File: dicformat.bt
+//      File: aaruformat.bt
 //   Authors: Natalia Portillo
-//   Version: 1.0
-//   Purpose: DiscImageChef format
+//   Version: 1.1
+//   Purpose: Aaru format
 //  Category: Misc
 // File Mask: *.dicf
-//  ID Bytes: 44 49 43 4D 46 52 4D 54 // DICMFRMT
+//  ID Bytes: 41 41 52 55 46 52 4D 54 // AARUFRMT
 //   History:
 //   1.0 2018-01-26 Natalia Portillo: Initial release
+//   1.1 2020-02-29 Natalia Portillo: Rebranding
 //------------------------------------------------
 
 #define DIC_MAGIC 0x544D52464D434944
+#define AARU_MAGIC 0x544D524655524141
 
 enum <uint> MediaType
 {
@@ -927,7 +929,7 @@ LittleEndian();
 
 local int i;
 
-Assert(ReadUInt64() == DIC_MAGIC, "Incorrect signature!");
+Assert(ReadUInt64() == DIC_MAGIC && ReadUInt64() == AARU_MAGIC, "Incorrect signature!");
 
 DicHeader header;
 

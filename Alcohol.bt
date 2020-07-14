@@ -2,7 +2,7 @@
 //--- 010 Editor v8.0.1 Binary Template
 //
 //      File: Alcohol.bt
-//   Authors: Natalia Portillo
+//   Authors: Natalia Portillo, RibShark
 //   Version: 0.1
 //   Purpose: Alcohol 120% media descriptor.
 //  Category: Misc
@@ -111,7 +111,20 @@ typedef struct
     uint unknown2;
 } AlcoholFooter;
 
+typedef struct
+{
+    uint unknown;  // 0x01
+    uint unknown2; // 0x1FC
+    uint unknown3; // 0x01
+    uint dpmStartSector; // 0x00
+    uint dpmResolution;
+    uint dpmEntryCount;
+    uint dpmEntries[this.dpmEntryCount];
+} AlcoholDPM;
+
 LittleEndian();
 AlcoholHeader header;
 FSeek(header.sessionOffset);
 AlcoholSession sessions[header.sessions];
+FSeek(header.dpmOffset);
+AlcoholDPM dpm;

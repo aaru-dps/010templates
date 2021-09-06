@@ -62,7 +62,7 @@ typedef struct
 {
     uint pregap;
     uint sectors;
-} AlcoholTrackExtra;
+} AlcoholTrackExtra <optimize=false>;
 
 typedef struct
 {
@@ -86,7 +86,15 @@ typedef struct
     uint files;
     uint footerOffset;
     byte unknown2[24];
-} AlcoholTrack;
+
+    if(extraOffset > 0)
+    {
+        local uint64 old_pos = FTell();
+        FSeek(extraOffset);
+        AlcoholTrackExtra extra;
+        FSeek(old_pos);
+    }
+} AlcoholTrack <optimize=false>;
 
 typedef struct
 {
@@ -101,7 +109,7 @@ typedef struct
     uint trackOffset;
     FSeek(this.trackOffset);
     AlcoholTrack tracks[this.allBlocks];
-}  AlcoholSession;
+}  AlcoholSession <optimize=false>;
 
 typedef struct
 {
@@ -115,3 +123,16 @@ LittleEndian();
 AlcoholHeader header;
 FSeek(header.sessionOffset);
 AlcoholSession sessions[header.sessions];
+FSeek(sessions[0].tracks[3].footerOffset);
+if(FTell() > 0)
+{
+    AlcoholFooter footer;
+    if(footer.filenameOffset > 0)
+    {
+        FSeek(footer.filenameOffset);
+        if(footer.widechar)
+            wstring Filename;
+        else
+            string Filename;
+    }
+}

@@ -1,0 +1,54 @@
+//------------------------------------------------
+//--- 010 Editor v11.0.1 Binary Template
+//
+//      File: qcow.bt
+//   Authors: Natalia Portillo
+//   Version: 
+//   Purpose: 
+//  Category: 
+// File Mask: *.qcow
+//  ID Bytes: 51 46 49 FB
+//   History: 
+//------------------------------------------------
+
+#define QCOW_MAGIC 0x514649FB
+
+typedef struct
+{
+    /// <summary>
+    ///     <see cref="Qcow.QCOW_MAGIC" />
+    /// </summary>
+uint magic;
+    /// <summary>Must be 1</summary>
+uint version;
+    /// <summary>Offset inside file to string containing backing file</summary>
+uint64 backing_file_offset;
+    /// <summary>Size of <see cref="backing_file_offset" /></summary>
+uint backing_file_size;
+    /// <summary>Modification time</summary>
+time_t mtime;
+    /// <summary>Size in bytes</summary>
+uint64 size;
+    /// <summary>Cluster bits</summary>
+byte cluster_bits;
+    /// <summary>L2 table bits</summary>
+byte l2_bits;
+    /// <summary>Padding</summary>
+ushort padding;
+    /// <summary>Encryption method</summary>
+uint crypt_method;
+    /// <summary>Offset to L1 table</summary>
+uint64 l1_table_offset;
+} QfiHeader;
+
+BigEndian();
+
+QfiHeader header;
+
+local int shift = header.cluster_bits + header.l2_bits;
+
+local int l1Size = ((header.size + (1 << shift)) - 1) >> shift;
+
+FSeek(header.l1_table_offset);
+
+uint64 l1[l1Size];

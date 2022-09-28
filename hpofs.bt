@@ -1,0 +1,215 @@
+//------------------------------------------------
+//--- 010 Editor v10.0.1 Binary Template
+//
+//      File: 
+//   Authors: 
+//   Version: 
+//   Purpose: 
+//  Category: 
+// File Mask: 
+//  ID Bytes: 
+//   History: 
+//------------------------------------------------
+
+LittleEndian();
+
+typedef struct 
+{
+    byte jump[3] <format=hex>;
+    char oem_name[8];
+    ushort bps;
+    byte spc;
+    ushort rsectors;
+    byte fats_no;
+    ushort root_ent;
+    ushort sectors;
+    byte media <format=hex>;
+    ushort spfat;
+    ushort sptrk;
+    ushort heads;
+    uint hsectors;
+    uint big_sectors;
+    byte drive_no <format=hex>;
+    byte nt_flags;
+    byte signature <format=hex>;
+    uint serial_no <format=hex>;
+    char volume_label[11];
+    char fs_type[8];
+    byte boot_code[442] <format=hex>;
+    uint unknown;
+    ushort unknown2;
+    ushort signature2 <format=hex>;
+} BiosParameterBlock <optimize=false>;
+
+typedef struct
+{
+    char blockId[8];
+    char volumeLabel[32];
+    char comment[160];
+    uint serial <format=hex>;
+    DOSDATE creationDate;
+    DOSTIME creationTime;
+    ushort codepageType;
+    ushort codepage;
+    uint rps;
+    ushort bps;
+    ushort bpc;
+    uint unknown2;
+    uint sectors;
+    uint unknown3;
+    uint64 unknown4;
+    ushort major;
+    ushort minor;
+    uint unknown5;
+    uint unknown6;
+    byte filler[260];
+} MediaInformationBlock <optimize=false>;
+
+typedef struct
+{
+    char blockId[8];
+    uint unknown;
+    uint unknown2;
+    uint DIR_INTENT_CNT <format=hex>;
+    uint DIR_UPDATE_CNT <format=hex>;
+    byte unknown3[22];
+    byte unknown4[32];
+    char owner[32];
+    byte unknown5[16];
+    uint unknown6;
+    ushort percentFull;
+    ushort unknown7;
+    byte filler[384];
+} VolumeInformationBlock <optimize=false>;
+
+typedef struct
+{
+    ushort length;
+    short unknown;
+    int start;
+} Extent <optimize=false>;
+
+typedef struct
+{
+    Extent extents[2];
+    uint unknown;
+    uint unknown2;
+    uint logical_size;
+    uint unknown3;
+    uint physical_size;
+    uint unknown4;
+    uint physical_size2;
+    uint unknown5;
+    uint unknown6;
+} subfile <optimize=false>;
+
+typedef struct
+{
+    uint unknown;
+    uint unknown2;
+    uint unknown3;
+    ushort : 1;
+    ushort subfiles_no : 2;
+    ushort : 13;
+    ushort unknown4;
+    uint unknown5;
+    uint unknown6;
+    uint unknown7;
+    DOSDATE date1;
+    DOSTIME time1;
+    DOSDATE date2;
+    DOSTIME time2;
+    uint unknown8;
+    uint unknown9;
+    uint unknown10;
+    uint unknown11;
+    uint unknown12;
+    uint unknown13;
+    uint unknown14;
+    subfile subfiles[subfiles_no];
+} direct <optimize=false>;
+
+typedef struct
+{
+    char blockId[4];
+    uint unknown;
+    ushort unknown2;
+    ushort unknown3;
+    uint unknown4;
+    ushort unknown5;
+    ushort unknown6;
+    ushort unknown7;
+    ushort unknown8;
+    uint unknown9;
+} master_record <optimize=false>;
+
+typedef struct
+{
+    byte unknown;
+    byte size;
+    byte unknown2;
+    byte unknown3;
+    byte unknown4; 
+    byte unknown5;
+    char name[size - 2];
+} dci_key <optimize=false>;
+
+typedef struct
+{
+    ushort key_len;
+    ushort record_len;
+    dci_key key;
+    byte padding[key_len - sizeof(key)];
+    direct dir;
+//    byte unknown[record_len - sizeof(direct)];
+} dci_entry <optimize=false>;
+
+typedef struct
+{
+    char blockId[4];
+    uint unknown;
+    uint unknown2;
+    uint unknown3;
+    uint unknown4;
+    uint unknown5;
+    ushort unknown6;
+    ushort unknown7;
+    uint unknown8;
+    uint unknown9;
+    dci_entry entries[9];
+} dci <optimize=false>;
+
+BiosParameterBlock BPB;
+
+Assert(BPB.fs_type == "HPOFS", "Incorrect signature");
+
+BigEndian();
+
+FSeek(BPB.bps * 13);
+MediaInformationBlock MIB;
+Assert(MIB.blockId == "MEDINFO ", "Incorrect media information block ID");
+
+FSeek(BPB.bps * 14);
+VolumeInformationBlock VIB;
+Assert(VIB.blockId == "VOLINFO ", "Incorrect volume information block ID");
+
+FSeek(BPB.bps * 5);
+direct bpb;
+FSeek(BPB.bps * 6);
+direct directory;
+FSeek(BPB.bps * 7);
+direct freefile;
+FSeek(BPB.bps * 8);
+direct unknown4;
+FSeek(BPB.bps * 9);
+direct unknown5;
+FSeek(BPB.bps * 10);
+direct unknown6;
+
+FSeek(BPB.bps * directory.subfiles[0].extents[0].start);
+master_record directory_master;
+FSeek(BPB.bps * freefile.subfiles[0].extents[0].start);
+master_record freefile_master;
+
+FSeek(BPB.bps * (directory.subfiles[0].extents[0].start+8));
+dci directory_dci;

@@ -42,7 +42,7 @@ enum <byte> AlcoholSubchannelMode
     Interleaved = 0x08
 };
 
-enum <uint> AlcoholPhysicalType
+enum <uint> AlcoholPhysicalBlockType
 {
     DPM = 0x01,
     ErrorSectors = 0x02
@@ -173,9 +173,9 @@ AlcoholPhysicalHeader physicalHeader;
 local int i;
 for (i = 0; i < physicalHeader.blockCount; i++) {
     FSeek(physicalHeader.blockOffsets[i]);
-    AlcoholPhysicalType type;
+    AlcoholPhysicalBlockType physicalBlockType;
     
-    switch (type) {
+    switch (physicalBlockType) {
         case DPM:
             AlcoholDPM dpm;
             break;

@@ -11,6 +11,7 @@
 //   History: 
 //   0.1 2018-01-08 Natalia Portillo: Initial release
 //   0.2 2020-07-15 RibShark: Added DPM structures
+//   0.3 2023-12-23 RibShark: Fixed DPM structures and added error sector structures
 //------------------------------------------------
 
 enum <unsigned short> AlcoholMediumType
@@ -32,13 +33,19 @@ enum <byte> AlcoholTrackMode
     Mode2F1 = 0xEC,
     Mode2F2 = 0xED,
     Mode2F1Alt = 0xAC,
-    Mode2F2Alt = 0xAD,
+    Mode2F2Alt = 0xAD
 };
 
 enum <byte> AlcoholSubchannelMode
 {
     None = 0x00,
     Interleaved = 0x08
+};
+
+enum <uint> AlcoholPhysicalType
+{
+    DPM = 0x01,
+    ErrorSectors = 0x02
 };
 
 typedef struct
@@ -56,7 +63,7 @@ typedef struct
  unsigned int structuresOffset;
  unsigned int unknown4[3];
  unsigned int sessionOffset;
- unsigned int dpmOffset;
+ unsigned int physicalHeaderOffset;
 } AlcoholHeader;
 
 typedef struct
@@ -122,14 +129,25 @@ typedef struct
 
 typedef struct
 {
-    uint unknown;  // 0x01
-    uint unknown2; // 0x1FC
-    uint unknown3; // 0x01
+    uint blockCount;
+    uint blockOffsets[this.blockCount];
+} AlcoholPhysicalHeader;
+
+typedef struct
+{
     uint dpmStartSector; // 0x00
     uint dpmResolution;
     uint dpmEntryCount;
     uint dpmEntries[this.dpmEntryCount];
 } AlcoholDPM;
+
+typedef struct
+{
+    uint unknown1; // 0x04
+    uint unknown2; // 0x01
+    uint errorCount;
+    uint errorSectors[this.errorCount];
+} AlcoholErrorSectors;
 
 LittleEndian();
 AlcoholHeader header;
@@ -148,6 +166,23 @@ if(FTell() > 0)
             string Filename;
     }
 }
-=======
-FSeek(header.dpmOffset);
-AlcoholDPM dpm;
+
+FSeek(header.physicalHeaderOffset);
+AlcoholPhysicalHeader physicalHeader;
+
+local int i;
+for (i = 0; i < physicalHeader.blockCount; i++) {
+    FSeek(physicalHeader.blockOffsets[i]);
+    AlcoholPhysicalType type;
+    
+    switch (type) {
+        case DPM:
+            AlcoholDPM dpm;
+            break;
+        case ErrorSectors:
+            AlcoholErrorSectors errorSectors;
+            break;
+        default:
+            break;
+    }
+}

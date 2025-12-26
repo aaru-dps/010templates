@@ -6,7 +6,7 @@
 //   Version: 1.2
 //   Purpose: Aaru format
 //  Category: Misc
-// File Mask: *.dicf
+// File Mask: *.aif
 //  ID Bytes: 41 41 52 55 46 52 4D 54 // AARUFRMT
 //   History:
 //   1.0 2018-01-26 Natalia Portillo: Initial release
@@ -587,7 +587,21 @@ enum <uint> MediaType
     ODC1200RE = 783,
     ODC1500R = 784,
     ODC3300R = 785,
-    ODC5500R = 786
+    ODC5500R = 786,
+    
+    ECMA_322_1k   = 800,
+    ECMA_322_512  = 801,
+    ISO_14517     = 802,
+    ISO_14517_512 = 803,
+    ISO_15041_512 = 804,
+    HSM650        = 805,
+
+    MetaFloppy_Mod_I = 820,
+    HF12 = 823,
+    HF24 = 824,
+
+    AtariLynxCard        = 821,
+    AtariJaguarCartridge = 822
 };
 
 enum <ushort> CompressionType
@@ -682,20 +696,25 @@ enum <ushort> DataType
     DecryptedDVDDiscKey              = 80,
     DVD_CPI_MAI                      = 81,
     DecryptedDVDTitleKey             = 82,
-    FluxData                         = 83,
-    BitstreamData                    = 84
+    DvdSectorId                      = 83,
+    DvdSectorIed                     = 84,
+    DvdSectorEdc                     = 85,
+    DvdSectorEccPi                   = 86,
+    DvdEccBlockPo                    = 87,
+    DvdPfi2ndLayer                   = 88
 };
 
 enum <uint> BlockType
 {
     DataBlock                    = 0x4B4C4244,
     DeDuplicationTable           = 0X2A544444,
-    DeDuplicationTable2          = 0x32454444,
-    Index                        = 0X58444E49,
-    Index2                       = 0x32584449,
-    IndexContinuation            = 0x43584449,
-    GeometryBlock                = 0x4D4F4547,
-    MetadataBlock                = 0x4154454D,
+    DeDuplicationTable2          = 0x32544444,
+    DeDuplicationTableSecondary  = 0x53545444, 
+    IndexBlock                   = 0X58444E49,
+    IndexBlock2                  = 0x32584449,
+    IndexBlock3                  = 0x33584449,
+    GeometryBlockId              = 0x4D4F4547,
+    MetadataBlockId              = 0x4154454D,
     TracksBlock                  = 0x534B5254,
     CicmBlock                    = 0x4D434943,
     ChecksumBlock                = 0x4D534B43,
@@ -704,11 +723,9 @@ enum <uint> BlockType
     ParentBlock                  = 0x50524E54,
     DumpHardwareBlock            = 0x2A504D44,
     TapeFileBlock                = 0x454C4654,
-    TwinSectorTable              = 0x42545754,
+    TapePartitionBlock           = 0x54425054,
     CompactDiscIndexesBlock      = 0x58494443,
-    FluxDataBlock                = 0x58554C46,
-    BitstreamDataBlock           = 0x53544942,
-    TrackLayoutBlock             = 0x594C4B54
+    AaruMetadataJsonBlock        = 0x444D534A
 };
 
 enum <byte> TrackType
@@ -727,25 +744,51 @@ enum <byte> ChecksumAlgorithm
     Md5 = 1,
     Sha1 = 2,
     Sha256 = 3,
-    SpamSum = 4
+    SpamSum = 4,
+    Blake3 = 5
 };
+
+typedef enum<uint64> {
+    AARU_FEATURE_RW_BLAKE3 = 0x1
+} FeaturesCompatible <edit=flags>;
 
 typedef struct
 {
-    char identifier[8];
-    wchar_t application[32];
-    byte imageMajorVersion;
-    byte imageMinorVersion;
-    byte applicationMajorVersion;
-    byte applicationMinorVersion;
-    MediaType mediaType;
-    uint64 indexOffset;
-    FILETIME creationTime;
-    FILETIME lastWrittenTime;
-    if(imageMajorVersion >= 3)
+    char                   identifier[8];
+
+    // Skip application name
+    FSeek(0x48);
+
+    byte                   imageMajorVersion;
+    byte                   imageMinorVersion;
+    
+    // Go back to application name
+    FSeek(0x08);
+    
+    if(imageMajorVersion >= 2)
+        char               application[64];
+    else
+        wchar_t            application[32];
+        
+    // Move to after image version
+    FSeek(0x4A);
+    
+    byte                   applicationMajorVersion;
+    byte                   applicationMinorVersion;
+    MediaType              mediaType;
+    uint64                 indexOffset;
+    FILETIME               creationTime;
+    FILETIME               lastWrittenTime;
+
+    if(imageMajorVersion >= 2)
     {
-        uint32 mediaType2;
-        GUID imageIdentifier;
+        GUID               guid;
+        byte               blockAlignmentShift;
+        byte               dataShift;
+        byte               tableShift;
+        FeaturesCompatible featureCompatible;
+        uint64             featureCompatibleRo;
+        uint64             featureIncompatible;
     }
 } AaruHeader;
 
@@ -767,15 +810,16 @@ typedef struct
     BlockType identifier;
     DataType type;
     CompressionType compression;
-    byte shift;
     byte levels;
     byte tableLevel;
-    uint64 previousLevel;
-    uint16 negative;
+    uint64 previousLevelOffset;
+    uint32 negative;
+    uint64 blocks;
+    uint32 overflow;
     uint64 start;
-    byte alignment;
-    byte shift;
-    byte sizeType;
+    byte blockAlignmentShift;
+    byte dataShift;
+    byte tableShift;
     uint64 entries;
     uint64 cmpLength;
     uint64 length;
@@ -813,7 +857,7 @@ typedef struct
     uint64 crc64 <format=hex>;
     uint64 previous;
     IndexEntry items[entries];
-} IndexContinuation;
+} Index3;
 
 typedef struct
 {
@@ -896,6 +940,13 @@ typedef struct
 
 typedef struct
 {
+    BlockType identifier;
+    uint length;
+    char json[length];
+} AaruJsonMetadataBlock;
+
+typedef struct
+{
     uint64 start;
     uint64 end;
 } DumpHardwareExtent;
@@ -920,7 +971,7 @@ typedef struct
     char softwareVersion[softwareVersionLength];
     char softwareOperatingSystem[softwareOperatingSystemLength];
     DumpHardwareExtent extents[extentCount];
-} DumpHardwareEntry;
+} DumpHardwareEntry <optimize=false>;
 
 typedef struct
 {
@@ -984,35 +1035,6 @@ typedef struct
 
 typedef struct
 {
-    BlockType identifier;
-    byte alignment;
-    byte shift;
-    uint64 entries;
-    uint64 length;
-    uint64 crc64 <format=hex>;
-    uint64 pointers[entries];
-} TwinSectorTable;
-
-typedef struct
-{
-    BlockType identifier;
-    uint64 length;
-    GUID parentId;
-    uint16 parentClueLength;
-    char parentClue[parentClueLength];
-} ParentFileBlock;
-
-typedef struct
-{
-    BlockType identifier;
-    uint64 length;
-    uint16 generation;
-    uint64 indexOffset;
-    FILETIME creationTime;
-} SnapshotBlock;
-
-typedef struct
-{
     uint16 track;
     uint16 index;
     uint32 lba;
@@ -1027,58 +1049,6 @@ typedef struct
     CompactDiscIndexEntry indexes[entries];
 } CompactDiscIndexesBlock;
 
-typedef struct
-{
-    uint32 head;
-    uint16 track;
-    byte subtrack;
-    uint64 resolution;
-    uint64 tableEntry;
-} FluxDataEntry;
-
-typedef struct
-{
-    BlockType identifier;
-    uint16 entries;
-    uint64 crc64 <format=hex>;
-    FluxDataEntry fluxes[entries];
-} FluxDataBlock;
-
-typedef struct
-{
-    uint32 head;
-    uint16 track;
-    byte subtrack;
-    uint64 tableEntry;
-} BitstreamDataEntry;
-
-typedef struct
-{
-    BlockType identifier;
-    uint16 entries;
-    uint64 crc64 <format=hex>;
-    BitstreamDataEntry bitstreams[entries];
-} BitstreamDataBlock;
-
-typedef struct
-{
-    uint16 sector;
-    uint64 block;
-} SectorMapEntry;
-
-typedef struct
-{
-    BlockType identifier;
-    uint64 crc64 <format=hex>;
-    uint32 head;
-    uint16 track;
-    byte subtrack;
-    uint16 sectors;
-    uint64 flux;
-    uint64 bitstream;
-    SectorMapEntry mappings[sectors];
-} TrackLayoutBlock;
-
 LittleEndian();
 
 local int i;
@@ -1091,13 +1061,21 @@ FSeek(header.indexOffset);
 local uint idxid = ReadUInt();
 FSeek(header.indexOffset);
 
-if(idxid == 0x32584449)
+switch(idxid)
 {
-    Index2 index;
-}
-else
-{
-    Index index;
+    case IndexBlock:
+        Index index;
+        break;
+    case IndexBlock2:
+        Index2 index;
+        break;
+    case IndexBlock3:
+        Index3 index;
+        break;
+    default:
+        Warning("Unknown index format");
+        Exit(1);
+        break;
 }
 
 for(i = 0; i < index.entries; i++)
@@ -1105,16 +1083,22 @@ for(i = 0; i < index.entries; i++)
     FSeek(index.items[i].offset);
     switch(index.items[i].blockType)
     {
-        case 0x4B4C4244:
+        case DataBlock:
             BlockHeader dataBlock;
             break;
-        case 0x2A544444:
+        case DeDuplicationTable:
             DdtHeader deduplicationTable;
             break;
-        case 0x4D4F4547:
+        case DeDuplicationTable2:
+            Ddt2Header deduplicationTable2;
+            break;
+        case DeDuplicationTableSecondary:
+            Ddt2Header deduplicationTableSecondary;
+            break;
+        case GeometryBlockId:
             GeometryBlock geometry;
             break;
-        case 0x4154454D:
+        case MetadataBlockId:
             MetadataBlock metadata;
             if(metadata.creatorOffset > 0)
             {
@@ -1177,52 +1161,34 @@ for(i = 0; i < index.entries; i++)
                 wchar_t DriveFirmwareRevision[metadata.driveFirmwareRevisionLength / 2];
             }
             break;
-        case 0x534B5254:
+        case TracksBlock:
             TracksHeader tracks;
             break;
-        case 0x4D434943:
+        case CicmBlock:
             CicmMetadataBlock cicmMetadata;
             break;
-        case 0x2A504D44:
+        case AaruMetadataJsonBlock:
+            AaruJsonMetadataBlock cicmMetadata;
+            break;
+        case DumpHardwareBlock:
             DumpHardwareHeader dumpHardware;
             break;
-        case 0x4D534B43:
+        case ChecksumBlock:
             ChecksumHeader checksum;
             break;
-        case 0x54425054:
+        case TapePartitionBlock:
             TapePartitionHeader partitions;
             break;
-        case 0x454C4654:
+        case TapeFileBlock:
             TapeFileHeader files;
             break;
-        case 0x32454444:
-            Ddt2Header deduplicationTable2;
-            break;
-        case 0x43584449: // TODO: Index Continuation
-            IndexContinuation indexContinuation;
+        case IndexBlock3: // TODO: Index Continuation
+            Index3 index;
             break;
         case 0x2A4D5044: // TODO: Data Position Measurement
             break;
-        case 0x50414E53:
-            SnapshotBlock snapshot;
-            break;
-        case 0x50524E54:
-            ParentFileBlock parent;
-            break;
-        case 0x42545754:
-            TwinSectorTable twinSector;
-            break;
         case 0x58494443:
             CompactDiscIndexesBlock compactDiscIndexes;
-            break;
-        case 0x58554C46:
-            FluxDataBlock fluxData;
-            break;
-        case 0x53544942:
-            BitstreamDataBlock bitstreamData;
-            break;
-        case 0x594C4B54:
-            TrackLayoutBlock trackLayout;
             break;
     }
 }
